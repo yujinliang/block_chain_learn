@@ -45,7 +45,7 @@ func (k *Kademlia) IterativeFindNode(target NodeID, delta int, final chan Contac
 			contact := heap.Pop(&frontier).(Contact)
 			go k.FindNode(contact, target, done)
 		}
-	} //注意本算法只是个尽力算法， 并没有满足closet node set原则， 找到的Node只是接近！只是尝试询问delta个node，//就停止继续call findnode,去逼近closet node .
+	} //注意本算法只是个尽力算法， 并没有满足closet node 原则， 找到的Node只是接近！只是尝试询问delta个node，//就停止继续call findnode,去逼近closet node .
 
 	//通俗地说，首先找出本地离target最近的n个node, 进而同时findnode询问其离target的node set, 收集回复的node set ，并且排除已经看到过的，
 	//如果询问的node个数达到delta，则放弃继续逼近closet node, 直接针对ret结果集按距离从小到大排序后返回！
