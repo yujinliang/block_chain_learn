@@ -82,7 +82,7 @@ func (dht *DHT) iterate(t int, target []byte, data []byte) (value []byte, closes
 	// fails to provide a node closer than closestNode, we should send a
 	// FIND_NODE RPC to all remaining nodes in the shortlist that have not
 	// yet been contacted.
-	//标记是否继续请求其余为请求Node.
+	//标记是否继续请求其余未请求Node.
 	queryRest := false
 
 	// We keep a reference to the closestNode. If after performing a search
@@ -112,8 +112,8 @@ func (dht *DHT) iterate(t int, target []byte, data []byte) (value []byte, closes
 		//遍历本地routetable中查找的离target最近的Node集合。
 		for i, node := range sl.Nodes {
 			// Contact only alpha nodes
-			//每一轮同时并发异步请求的Node个数不得大于alpha.
-			//queryRest 标记用于标定是否继续请求剩余未请求Node。
+			//同时并发异步请求的Node个数不得大于alpha.
+			//queryRest 用于标定是否继续请求sl中剩余未请求Node。
 			if i >= alpha && !queryRest {
 				break
 			}
@@ -164,7 +164,7 @@ func (dht *DHT) iterate(t int, target []byte, data []byte) (value []byte, closes
 			expectedResponses = append(expectedResponses, res)
 		}
 
-		//从closet node set中删除无响应者！切记：并非从route table中删除！因为去中心，分布式网络模式特性，决定了每一个节点随时可能上线或下线。
+        //从sl(closet node set)中删除无响应者！切记：并非从route table中删除！因为去中心，分布式网络模式特性，决定了每一个节点随时可能上线或下线。
 		//通俗地讲：离自己最近的熟人朋友，也不可能随叫随到！但是不能因为未响应就认定不再是熟人朋友！这是不稳定的！
 		for _, n := range removeFromShortlist {
 			sl.RemoveNode(n)
@@ -185,7 +185,7 @@ func (dht *DHT) iterate(t int, target []byte, data []byte) (value []byte, closes
 						return
 					}
 					dht.addNode(newNode(result.Sender)) //更新routetable, 认识result.Sender。
-					resultChan <- result //想外层继续汇总每一个go 协程的响应结果。
+					resultChan <- result //向外层继续汇总每一个go 协程的响应结果。
 					return
 				case <-time.After(dht.options.TMsgTimeout):
 					dht.networking.cancelResponse(r) //取消这个已经超时的rpc.
@@ -300,7 +300,7 @@ func (dht *DHT) iterate(t int, target []byte, data []byte) (value []byte, closes
 >
 > 大家（所有节点）按同一规则扎堆结伴(distance)，按同一个规则 (distance)找人， 理论上一定能找到target所在的熟人（朋友）圈， 除非节点不诚实或下线的比例太大。
 >
-> 当探测到一个node节点无反应(下线)时， 是否立即将其删除，加入新节点！若是则网络可用性提高， 但是可靠性和安全性下降，`kademlia`倾向于不会轻易删除未响应节点， 从而有效避免一定的安全风险！俗话说，好朋友并非天天腻乎在一起！
+> 当探测到一个node节点无反应(下线)时， 是否立即将其删除，加入新节点！若是则网络可用性提高， 但是可靠性和安全性下降，`kademlia`倾向于不会轻易删除未响应节点， 从而有效避免一定的安全风险！俗话说，好朋友并非天天腻乎在一起！喜新厌旧容易招致不安全。
 >
 > `kademlia`挺有人情味的，不轻易抛弃放弃。
 
