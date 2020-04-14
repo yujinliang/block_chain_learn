@@ -306,6 +306,51 @@ func (dht *DHT) iterate(t int, target []byte, data []byte) (value []byte, closes
 
 
 
+- `kademlia attack`
+
+> underlay network(底层网络):
+>
+> Spoofing, Eavesdropping, Packet modifications(欺骗、窃听、数据包修改)
+>
+> Overlay routing:
+> Eclipse attack(日蚀攻击)
+> Sybil attack(梅比尔攻击)
+> Adversarial routing(对抗路由)
+>
+> Other attacks:
+> Denial‐of‐Service
+> Data Storage
+>
+> Overlay network must provide end‐to‐end security(覆盖网络必须提供端到端的安全性)
+>
+> Attacker: Cuts off a part of the network(攻击者：切断网络的一部分)
+>
+> 加入大量不诚实的伪装节点，从而控制overlay network.
+>
+> 导致：Lookups fail, data corruption, partitioning。
+>
+> 对策：Prevent a node from choosing its ID freely（关键在于`kademlia node id`的合法性， 可否验证身份！不能随便模拟！）
+>
+> [具体方案A]
+>
+> `Simple solution: Use NodeID := H( IP + Port )
+> No authentication, problems with NAT(IP地址不固定)
+> IP spoofing still possible（仍然可IP欺骗）`
+>
+> ---
+>
+> [具体方案B]
+>
+> `Better solution: Cryptographic NodeID
+> NodeID := H( public‐key ) （采用不对称加密技术， 对公钥hash得到NodeID, 好处多多）
+> Allows authentication, key exchange, signing messages（可以验证身份，签名消息）`
+>
+> 很显然方案B非常优秀，但是秘钥的生成管理也是个问题，当然由中心化的权威组织发放，则安全最有保障，但是不符合`p2p、区块链`去中心化的思想；如果私人自己生成秘钥，虽然有效降低了风险，但是仍然存在风险漏洞。
+
+
+
+
+
 
 
 
