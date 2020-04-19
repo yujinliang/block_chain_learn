@@ -525,6 +525,8 @@ func (dht *DHT) iterate(t int, target []byte, data []byte) (value []byte, closes
 > (2) 上面算法实现中，对于`未响应的peer node 或rpc error的Node`, 应该从本地queried_nodes中删除。
 >
 > (3) 如果lookup_nodes本身也可以并发调用， 那么不同`findnode rpc response`如何区分？每一个`rpc request and response`需要排队串行或者统统附加上`target key, and rpc sequence number or ID or Token`？ 总之需要唯一标记每一个`rpc request and respose 与lookup_nodes的对应关系`,这需要设计关切和决策。
+>
+> (4) `Kademlia paper`及其许多相关设计和实现都建议，采用`UDP`来管理和维护`Kademlia Overlay Network`, 这样比价轻便，无状态，代价小。`但是RPC request and repose设计实现需要自己考虑lookup_nodes -- findnode request -- findnode response的映射关系`。
 
 
 
