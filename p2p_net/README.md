@@ -349,9 +349,180 @@ func (dht *DHT) iterate(t int, target []byte, data []byte) (value []byte, closes
 
 
 
+3. `https://github.com/jeffrey-xiao/kademlia-dht-rs /src/node/mod.rs lookup_nodes`
 
+```rust
+    /// Iteratively looks up nodes to determine the closest nodes to `key`. The search begins by
+    /// selecting `CONCURRENCY_PARAM` nodes in the routing table and adding it to a shortlist. It
+    /// then sends out either `FIND_NODE` or `FIND_VALUE` RPCs to `CONCURRENCY_PARAM` nodes not yet
+    /// queried in the shortlist. The node will continue to fill its shortlist until it did not find
+    /// a closer node for a round of RPCs or if runs out of nodes to query. Finally, it will query
+    /// the remaining nodes in its shortlist until there are no remaining nodes or if it has found
+    /// `REPLICATION_PARAM` active nodes.
+    fn lookup_nodes(&mut self, key: &Key, find_node: bool) -> ResponsePayload {
+        //首先加锁从本地routetable中请求离key最近的Nodes.
+        let routing_table = self.routing_table.lock().unwrap();
+        let closest_nodes = routing_table.get_closest_nodes(key, CONCURRENCY_PARAM);
+        drop(routing_table); //代表立即释放锁。
 
+        //通过比较找出本地closest nodes中最小距离Node。
+        let mut closest_distance = Key::new([255u8; KEY_LENGTH]);
+        for node_data in &closest_nodes {
+            closest_distance = cmp::min(closest_distance, key.xor(&node_data.id))
+        }
 
+        // initialize found nodes, queried nodes, and priority queue
+        //标记发现看到过的Nodes.
+        let mut found_nodes: HashSet<NodeData> = closest_nodes.clone().into_iter().collect();
+        found_nodes.insert((*self.node_data).clone());
+        //标记已经请求过的Nodes.
+        let mut queried_nodes = HashSet::new();
+        queried_nodes.insert((*self.node_data).clone());
+
+        //标记待请求优先级队列（按距离）
+        let mut queue: BinaryHeap<NodeDataDistancePair> = BinaryHeap::from(
+            closest_nodes
+                .into_iter()
+                .map(|node_data| NodeDataDistancePair(node_data.clone(), node_data.id.xor(key)))
+                .collect::<Vec<NodeDataDistancePair>>(),
+        );
+
+        let (tx, rx) = channel(); //用于收集findnode rpc response.
+
+        let mut concurrent_thread_count = 0; //用于累计并发异步请求数。
+
+        // spawn initial find requests
+        for _ in 0..CONCURRENCY_PARAM {
+            if !queue.is_empty() { //开始并发异步findnode rpc.
+                self.clone().spawn_find_rpc( 
+                    queue.pop().unwrap().0,
+                    key.clone(),
+                    tx.clone(),
+                    find_node,
+                );
+                concurrent_thread_count += 1;
+            }
+        }
+
+        // loop until we could not find a closer node for a round or if no threads are running
+        while concurrent_thread_count > 0 { //如果>0, 说明需要收集处理findnode rpc reponse.
+            //如果发起的并发异步findnode rpc不够数，且待请求优先级队列不空，则继续并发异步请求findnode rpc.
+            while concurrent_thread_count < CONCURRENCY_PARAM && !queue.is_empty() {
+                self.clone().spawn_find_rpc(
+                    queue.pop().unwrap().0,
+                    key.clone(),
+                    tx.clone(),
+                    find_node,
+                );
+                concurrent_thread_count += 1;
+            }
+
+            let mut is_terminated = true; //用于标记是否停止继续逼近closet distance node.
+            let response_opt = rx.recv().unwrap(); //同步阻塞等待findnode rpc reponse.
+            concurrent_thread_count -= 1; //收到一个请求，意味着一个findnode rpc 完毕,故此减一。
+
+            //具体处理findnode rpc response.
+            match response_opt { 
+                Some(Response {
+                    payload: ResponsePayload::Nodes(nodes),
+                    receiver,
+                    ..
+                }) => {
+                    //本case处理远端Node反馈的closet nodes.
+                    queried_nodes.insert(receiver); //将此给出响应的Node加入已请求Node集合。
+                    for node_data in nodes { //处理此远端Node的closet node 集合（离target key）。
+                        let curr_distance = node_data.id.xor(key);
+
+                        if !found_nodes.contains(&node_data) { //如果从未发现看到过，则加入处理， 否则丢弃。
+                            if curr_distance < closest_distance {
+                                //如果发现更进的距离，即更近的Node， 则记录之。
+                                closest_distance = curr_distance;
+                                is_terminated = false; //发现比上一轮更近的Node, 意味着逼近需要继续，不要停止。
+                            }
+
+                            found_nodes.insert(node_data.clone()); //标记已经发现看到了此Node.
+                            let dist = node_data.id.xor(key);
+                            let next = NodeDataDistancePair(node_data.clone(), dist);
+                            queue.push(next.clone()); //将此Node加入待请求优先级队列。
+                        }
+                    }
+                }
+                Some(Response {
+                    payload: ResponsePayload::Value(value),
+                    ..
+                }) => return ResponsePayload::Value(value),
+                _ => is_terminated = false, //默认case ,继续逼近closet node.
+            }
+
+            if is_terminated { //如果此标志为true, 则停止此循环迭代逼近。
+                break;
+            }
+            debug!("CURRENT CLOSEST DISTANCE IS {:?}", closest_distance);
+        }
+
+        //走到此处代表逼近得到closet nodes. 或者没有findnode rpc 需要处理了。
+        debug!(
+            "{} TERMINATED LOOKUP BECAUSE NOT CLOSER OR NO THREADS WITH DISTANCE {:?}",
+            self.node_data.addr, closest_distance,
+        );
+
+        //一般来说即使不足REPLICATION_PARAM个数Node，也不必再去逼近，故此下面while块可以忽略。
+        // loop until no threads are running or if we found REPLICATION_PARAM active nodes
+        while queried_nodes.len() < REPLICATION_PARAM {  //意思是说如果未凑足REPLICATION_PARAM， 则需继续逼近，直到凑足数。
+            while concurrent_thread_count < CONCURRENCY_PARAM && !queue.is_empty() {
+                self.clone().spawn_find_rpc(
+                    queue.pop().unwrap().0,
+                    key.clone(),
+                    tx.clone(),
+                    find_node,
+                );
+                concurrent_thread_count += 1;
+            }
+            if concurrent_thread_count == 0 {
+                break;
+            }
+
+            let response_opt = rx.recv().unwrap();
+            concurrent_thread_count -= 1;
+
+            match response_opt {
+                Some(Response {
+                    payload: ResponsePayload::Nodes(nodes),
+                    receiver,
+                    ..
+                }) => {
+                    queried_nodes.insert(receiver);
+                    for node_data in nodes {
+                        if !found_nodes.contains(&node_data) {
+                            found_nodes.insert(node_data.clone());
+                            let dist = node_data.id.xor(key);
+                            let next = NodeDataDistancePair(node_data.clone(), dist);
+                            queue.push(next.clone());
+                        }
+                    }
+                }
+                Some(Response {
+                    payload: ResponsePayload::Value(value),
+                    ..
+                }) => return ResponsePayload::Value(value),
+                _ => {}
+            }
+        }
+
+        //对已请求过的node集合按距离从小到大排序，然后返回指定个数Nodes.
+        let mut ret: Vec<NodeData> = queried_nodes.into_iter().collect();
+        ret.sort_by_key(|node_data| node_data.id.xor(key));
+        ret.truncate(REPLICATION_PARAM);
+        debug!("{} -  CLOSEST NODES ARE {:#?}", self.node_data.addr, ret);
+        ResponsePayload::Nodes(ret)
+    }
+```
+
+> 关切点：
+>
+> (1)  `findnode rpc 调用应该实现timeout机制，避免无限期无意义等待`。
+>
+> (2) 上面算法实现中，对于`未响应的peer node 或rpc error的Node`, 应该从本地queried_nodes中删除。
 
 
 
