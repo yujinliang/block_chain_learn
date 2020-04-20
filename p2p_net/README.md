@@ -564,7 +564,11 @@ func (dht *DHT) iterate(t int, target []byte, data []byte) (value []byte, closes
 >
 > 否则如果对应`kbucket`不满， 则直接将sender Node插入至队列尾。
 >
-> 否则ping一下`kbucket`队列头最老的Node, 如果失败， 则删除队列头最老Node并将sender Node插入至队列尾。如果ping成功,则丢弃sender Node并将`队列头最老Node移动至队列尾`（当然也可以将sender Node 放进一个cache中备用，不一定非要直接丢弃删除）。
+> 否则ping一下`kbucket`队列头最老的Node, 如果失败， 则删除队列头最老Node并将sender Node插入至队列尾。如果ping成功,则丢弃sender Node并将`队列头最老Node移动至队列尾`（当然也可以将sender Node 放进一个cache中日后备用，不一定非要直接丢弃删除）。
+>
+> -------------------------------------------------------------
+>
+> 对于lookup_nodes找到的某key的closet node set  我暂且称之为X set , `kademlia paper`并没有规定要求`update kbucket with it`, 因为没有必要， 只有当你主动向X set中的Node发消息(`RPC call`)并获得响应的时候， `kademlia Node`才会将其存入自己的`routetable(kbucket)中`。好比现实社会，我认识很多人，如：国家领导人、明星等等， 但是我与他们没有直接交互，所以不需要记录到我的个人通讯录中！只有直接交互过的人，我才可能记录。
 >
 > `此篇kademlia设计文档非常清晰：http://xlattice.sourceforge.net/components/protocol/kademlia/specs.html`
 >
@@ -575,7 +579,6 @@ func (dht *DHT) iterate(t int, target []byte, data []byte) (value []byte, closes
 ------
 
 - 新节点如何`Join kademlia network(bootstrap)`
-
 
 
 
