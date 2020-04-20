@@ -530,9 +530,70 @@ func (dht *DHT) iterate(t int, target []byte, data []byte) (value []byte, closes
 
 
 
+------
+
+- ## 淘汰死节点，加入活节点`Update kbucket`
+
+> `When a Kademlia node receives any message from another node, it updates the appropriate kbucket for the sender’s node ID` (`Kademlia Paper 规定一个Kademlia node 只要收到其他node的任何消息，则update kbucket with sender Node` 这个设计这的很巧妙，只在消息收发之间就完成了网络的管理和维护，不需要额外复杂逻辑和处理流程， 及其轻便高效)
+>
+> **[`kbucket update algorithm`]**
+>
+> `if the sender node already exists in the kbucket:`
+>
+> ----`Moves it to the tail of the list.` 
+>
+> `else If the bucket has fewer than k entries:`
+>
+> ----`Inserts the new sender at the tail of the list. ` //
+>
+> `else`
+>
+> ----`Pings the kbucket’s least­ recently seen node:`
+>
+> ----`If the least­ recently seen node fails to respond:``
+>
+> --------``it is evicted from the k­bucket and the new sender inserted at the tail.`
+>
+> ----`else`
+>
+> --------`it is moved to the tail of the list, and the new sender’s contact is  discarded.`
+>
+> `Kademlia Protocol 规定了必须实现的4个RPC API:  PING, FIND_NODE, FIND_VALUE, STORE`。`Kademlia规定只要收到其他Node的RPC响应`， 必须首先`Update kbucket with the sender Node`  学习新节点。学习算法为：
+>
+> 如果sender Node已经存在于相应`kbucket`, 则将此Node移动至对列尾，代表最新节点。
+>
+> 否则如果对应`kbucket`不满， 则直接将sender Node插入至队列尾。
+>
+> 否则ping一下`kbucket`队列头最老的Node, 如果失败， 则删除队列头最老Node并将sender Node插入至队列尾。如果ping成功,则丢弃sender Node并将`队列头最老Node移动至队列尾`（当然也可以将sender Node 放进一个cache中备用，不一定非要直接丢弃删除）。
+>
+> `此篇kademlia设计文档非常清晰：http://xlattice.sourceforge.net/components/protocol/kademlia/specs.html`
+>
+> `https://colobu.com/2018/03/26/distributed-hash-table/`
 
 
 
+------
+
+- 新节点如何`Join kademlia network(bootstrap)`
+
+
+
+
+------
+
+- Node ID 如何定义
+
+
+
+------
+
+- `Kademlia RPC设计关切点` (并发和异步)
+
+
+
+------
+
+- Reference
 
 
 
