@@ -580,13 +580,47 @@ func (dht *DHT) iterate(t int, target []byte, data []byte) (value []byte, closes
 
 - 新节点如何`Join kademlia network(bootstrap)`
 
-
+> 1. 新节点A如果没有自己的node ID, 则生成一个n。
+> 2. 新节点A必须知道某个`引导节点B(又称种子节点， 其实就是kademlia 网络中某个已知节点， 通俗地说就是老人带新人)`， 并将B加入到`kbucket`中。
+> 3. 向B（A目前知道的唯一节点）发起`Lookup_Nodes(n)`。
+>
+> ---
+>
+> `这种“自我定位”将使得Kademlia network中的其他节点（收到请求的节点）能够使用A的ID填充他们的K-桶，同时也能够使用那些查询过程的中间节点来填充A的K-桶。这个过程既让A获得了详细的路由表，也让其它节点知道了A节点的加入，一举两得！`
+>
+> 
 
 ------
 
 - Node ID 如何定义
 
-
+> `Kademlia`使用160位的哈希算法（比如 `SHA1`），完整的 ID 用二进制表示有160位，这样可以容纳2的160次方个节点，可以说是不计其数了。`Kademlia`把 key 映射到一个二叉树，每一个 key 都是这个二叉树的`叶子`.这是`kademlia paper原始定义`， 但是并非强制， 具体实现可以自己选择哈希算法和位数，比如`SHA256`等， 非常灵活！本质： `aHash(一个唯一key ) => a ID Number`,  ID描述方式： (a) 一个数字（需要对应到编程语言的具体数值类型，并且需要注意大小端字节的区别）(b) 一个位数组(位切片， 如rust中的array/slice, 并非数值类型，不用考虑大小端字节)
+>
+> A ⊕ B => distance M => M's left leading zeros (如: 00001000, 左端4个零) => 0的个数计为i => `i- kbucket ` ,此i即为`kbucket`的索引,  2^i <= distance(A, B) < 2^(i+1).
+>
+> ```rust
+> #[derive(Ord, PartialOrd, PartialEq, Eq, Clone, Hash, Serialize, Deserialize, Default, Copy)]
+> pub struct Key(pub [u8; KEY_LENGTH]);
+> ```
+>
+> ```go
+> type NodeID [IDLength]byte
+> ```
+>
+> ```go
+> type NetworkNode struct {
+> 	// ID is a 20 byte unique identifier
+> 	ID []byte
+> 
+> 	// IP is the IPv4 address of the node
+> 	IP net.IP
+> 
+> 	// Port is the port of the node
+> 	Port int
+> }
+> ```
+>
+> 
 
 ------
 
