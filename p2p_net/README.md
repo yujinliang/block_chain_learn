@@ -620,6 +620,54 @@ func (dht *DHT) iterate(t int, target []byte, data []byte) (value []byte, closes
 > }
 > ```
 >
+> `sum left leading zeros`
+>
+> ```go
+> func (node NodeID) Xor(other NodeID) (ret NodeID) {
+> 	for i := 0; i < IDLength; i++ {
+> 		ret[i] = node[i] ^ other[i]
+> 	}
+> 	return
+> }
+> 
+> func (node NodeID) PrefixLen(other NodeID) int {
+> 	distance := node.Xor(other)
+> 	for i := 0; i < IDLength; i++ {
+> 		for j := 0; j < 8; j++ {
+> 			if (distance[i]>>uint8(7-j))&0x1 != 0 {
+> 				return 8*i + j
+> 			}
+> 		}
+> 	}
+> 	return -1
+> }
+> ```
+>
+> ```c++
+> static int common_bits(const unsigned char *id1, const unsigned char *id2)
+> {
+>     int i, j;
+>     unsigned char xor;
+>     for(i = 0; i < 20; i++) {
+>         if(id1[i] != id2[i])
+>             break;
+>     }
+> 
+>     if(i == 20)
+>         return 160;
+> 
+>     xor = id1[i] ^ id2[i];
+> 
+>     j = 0;
+>     while((xor & 0x80) == 0) {
+>         xor <<= 1;
+>         j++;
+>     }
+> 
+>     return 8 * i + j;
+> }
+> ```
+>
 > 
 
 ------
