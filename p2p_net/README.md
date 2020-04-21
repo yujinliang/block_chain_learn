@@ -599,15 +599,18 @@ func (dht *DHT) iterate(t int, target []byte, data []byte) (value []byte, closes
 > A ⊕ B => distance M => M's left leading zeros (如: 00001000, 左端4个零) => 0的个数计为i => `i- kbucket ` ,此i即为`kbucket`的索引,  2^i <= distance(A, B) < 2^(i+1).
 >
 > ```rust
+> //rust
 > #[derive(Ord, PartialOrd, PartialEq, Eq, Clone, Hash, Serialize, Deserialize, Default, Copy)]
 > pub struct Key(pub [u8; KEY_LENGTH]);
 > ```
 >
 > ```go
+> //golang
 > type NodeID [IDLength]byte
 > ```
 >
 > ```go
+> //golang
 > type NetworkNode struct {
 > 	// ID is a 20 byte unique identifier
 > 	ID []byte
@@ -623,6 +626,7 @@ func (dht *DHT) iterate(t int, target []byte, data []byte) (value []byte, closes
 > `sum left leading zeros`
 >
 > ```go
+> //golang
 > func (node NodeID) Xor(other NodeID) (ret NodeID) {
 > 	for i := 0; i < IDLength; i++ {
 > 		ret[i] = node[i] ^ other[i]
@@ -644,27 +648,28 @@ func (dht *DHT) iterate(t int, target []byte, data []byte) (value []byte, closes
 > ```
 >
 > ```c++
+> //c/c++
 > static int common_bits(const unsigned char *id1, const unsigned char *id2)
 > {
->     int i, j;
->     unsigned char xor;
->     for(i = 0; i < 20; i++) {
->         if(id1[i] != id2[i])
->             break;
->     }
+>  int i, j;
+>  unsigned char xor;
+>  for(i = 0; i < 20; i++) {
+>      if(id1[i] != id2[i])
+>          break;
+>  }
 > 
->     if(i == 20)
->         return 160;
+>  if(i == 20)
+>      return 160;
 > 
->     xor = id1[i] ^ id2[i];
+>  xor = id1[i] ^ id2[i];
 > 
->     j = 0;
->     while((xor & 0x80) == 0) {
->         xor <<= 1;
->         j++;
->     }
+>  j = 0;
+>  while((xor & 0x80) == 0) {
+>      xor <<= 1;
+>      j++;
+>  }
 > 
->     return 8 * i + j;
+>  return 8 * i + j;
 > }
 > ```
 >
