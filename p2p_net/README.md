@@ -685,7 +685,45 @@ func (dht *DHT) iterate(t int, target []byte, data []byte) (value []byte, closes
 
 - Reference
 
-
+> [**https://github.com/kelseyc18/kademlia_vis**](https://github.com/kelseyc18/kademlia_vis)
+>
+> http://xlattice.sourceforge.net/components/protocol/kademlia/specs.html
+>
+> https://github.com/libp2p/rust-libp2p/tree/master/protocols/kad
+>
+> [**https://github.com/libp2p/go-libp2p-kad-dht**](https://github.com/libp2p/go-libp2p-kad-dht)
+>
+> https://github.com/cfromknecht/kademlia
+>
+> [**https://github.com/leejunseok/kademlia-rs**](https://github.com/leejunseok/kademlia-rs)
+>
+> [**https://github.com/dtantsur/rust-dht**](https://github.com/dtantsur/rust-dht)
+>
+> https://github.com/jeffrey-xiao/kademlia-dht-rs
+>
+> https://colobu.com/2018/03/26/distributed-hash-table/
+>
+> https://github.com/jech/dht
+>
+> https://github.com/libp2p/rust-libp2p
+>
+> https://pdos.csail.mit.edu/~petar/papers/maymounkov-kademlia-lncs.pdf
+>
+> https://blog.csdn.net/hoping/article/details/5307320
+>
+> https://github.com/jakerachleff/tinytorrent
+>
+> http://www.scs.stanford.edu/17au-cs244b/labs/projects/kaplan-nelson_ma_rachleff.pdf
+>
+> https://github.com/jakerachleff/simple-kademlia
+>
+> https://github.com/DavidKeller/kademlia
+>
+> https://github.com/arvidn/libtorrent
+>
+> https://blog.csdn.net/elninowang/article/details/80599908
+>
+> 
 
 
 
