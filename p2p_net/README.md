@@ -677,7 +677,7 @@ func (dht *DHT) iterate(t int, target []byte, data []byte) (value []byte, closes
 
 ------
 
-- `Kademlia RPC设计关切点` (并发和异步)
+- `Kademlia RPC设计关切点` (并发和异步,UDP)
 
 
 
