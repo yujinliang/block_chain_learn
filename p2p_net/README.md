@@ -679,6 +679,14 @@ func (dht *DHT) iterate(t int, target []byte, data []byte) (value []byte, closes
 
 - `Kademlia RPC设计关切点` (并发和异步,UDP)
 
+> `并发、异步、UDP`，这三个核心特性决定了， 需要设计映设机制来保持request <-> response之间的对应关系！因为并发、异步和`UDP的无连接特性`， 你发你的request，我收我的response，无法保证request和response的对应关系！
+>
+> (1) 设计思路： 所有并发异步发送的`kademlia RPC 请求` 都被打入串行队列中，当然会返回给caller一个stub,具体可以是一个channel等， 用于查收`RPC response`, 以先进先出的方式排队， 尾部入头部出， 每次只有仅有唯一一个`kademlia RPC`会通过`UDP`方式发出， 一定时间内收到response则认为收到了响应， 否则超时。这种设计简单粗暴，效率低下（没有并发）， 而且易受攻击（因为`RPC reponse`也许是人家伪造地，没有验明正身）！我认为不可取。
+>
+> (2) 设计思路：所有`kademlia RPC`同时并发异步发出，不排队不等待， 只是每一个`RPC request中绑定了一个唯一的ID/TOKEN之类的身份牌`， 并在本地的某个地方，以形如：map[ request ID : response stub] 存储了用于查收`RPC response`的stub, 具体可为：map[request ID : a channel];  独立的listen机制负责接受所有的`RPC response`,  而远端Node在回复时， 必须为此`RPC response`绑定好对应的`RPC request ID` ， 然后方可发送，本端收到`RPC response` 后， 会取出其`RPC request ID`， 并去本地map中查找， 若找到，则写入此response, 若未找到，则抛弃。
+>
+> 与方案(1)相比效率的确高出很多，唯一瓶颈在于收发都需要读写`map[requestID:  a channel]`, 可以考虑采用lock-free 数据结构代替大力度`Mutex`, 从而避免block。目前也只是想到方案（2）比较可行。
+
 
 
 ------
