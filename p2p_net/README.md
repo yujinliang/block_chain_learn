@@ -737,3 +737,14 @@ func (dht *DHT) iterate(t int, target []byte, data []byte) (value []byte, closes
 
 
 
+------
+
+- Author
+
+> 学习随笔，如有谬误，尽请指正，谢谢。
+>
+> 作者：心尘了
+>
+> email: [285779289@qq.com](mailto:285779289@qq.com)
+>
+> 微信：13718438106
